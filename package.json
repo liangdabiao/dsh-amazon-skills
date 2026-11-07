@@ -1,0 +1,59 @@
+{
+  "name": "dsh-amazon-skills",
+  "version": "0.1.0",
+  "description": "亚马逊卖家工具箱：54 个精选技能（选品调研/Listing 优化/FBA 计算/PPC 广告/评论策略…）随包分发，外加关键词长尾扩展与商品页结构化抓取两个真实数据工具。",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/host.js",
+  "exports": {
+    ".": "./src/host.js",
+    "./client": "./dist/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json"
+  },
+  "icon": "./icon.svg",
+  "files": [
+    "src",
+    "dist",
+    "lib",
+    "skills",
+    "locale/*.json",
+    "cordis.patch.yml",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "amazon",
+    "seller",
+    "seo",
+    "keywords"
+  ],
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0",
+    "dsh": ">=0.2.1-rc.2 <0.3.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.10"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "test": "node --test \"test/*.test.mjs\"",
+    "selftest": "node scripts/selftest.mjs",
+    "prepack": "npm run build"
+  }
+}

@@ -1,0 +1,5 @@
+# 亚马逊卖家工具箱：Host 半边（54 技能快照的提供方、两个数据工具、面板接口）。
+# 浏览器半边由 package.json 的 dsh.client 声明加载（./client → dist/client.js）。
+- insert:
+    - id: amazon-skills
+      name: 'dsh-amazon-skills'
