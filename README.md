@@ -56,6 +56,13 @@ cp -r "<上游>/skills" skills && rm -f skills/banner.png
 node scripts/vendor-manifest.mjs
 ```
 
+
+## 安装
+
+```bash
+dsh plugin --profile web add dsh-amazon-skills
+```
+
 ## 许可
 
 - 插件代码：MIT
