@@ -1,6 +1,6 @@
 {
   "name": "dsh-amazon-skills",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "亚马逊卖家工具箱：54 个精选技能（选品调研/Listing 优化/FBA 计算/PPC 广告/评论策略…）随包分发，外加关键词长尾扩展与商品页结构化抓取两个真实数据工具。",
   "license": "MIT",
   "type": "module",

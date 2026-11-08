@@ -1,7 +1,7 @@
 // lib 层单测：快照合规、rewrite/addendum、补全解析、listing 提取、鉴权。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, existsSync } from 'node:fs'
+import { mkdtempSync, existsSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -18,17 +18,35 @@ const { requestRejection } = await import('../lib/api.js')
 const SKILL_DIRS = [join(ROOT, 'skills')]
 
 // ---------- 快照 ----------
-test('快照完整：54 个技能全部可解析（含 2 个修复）', () => {
+test('快照完整：54 个技能全部可解析（含 2 个原非标已修文件）', () => {
   const skills = readSkills(SKILL_DIRS)
   assert.equal(skills.length, 54, `实际 ${skills.length} 个`)
   assert.ok(existsSync(join(ROOT, 'skills', 'manifest.json')), 'manifest.json 应存在')
   assert.ok(!existsSync(join(ROOT, 'skills', 'banner.png')), 'banner.png 应被排除')
   const repaired = skills.filter((s) => s.name === 'amazon-keyword-tracker' || s.name === 'amazon-price-tracker')
-  assert.equal(repaired.length, 2, '两个非标 frontmatter 应被修复')
+  assert.equal(repaired.length, 2, '两个原非标 frontmatter 现已可直接解析')
   for (const s of skills) {
     assert.match(s.name, /^[a-z0-9]+(-[a-z0-9]+)*$/, `技能名不合规范：${s.name}`)
     assert.ok(s.description.length > 20, `${s.name} description 太短`)
   }
+})
+
+test('frontmatter 全部标准：54 个文件都能被 parse() 直接读出 name + description', () => {
+  // 0.1.2 之前有 4 个非标：2 个 description 用了 `>` 折叠块、2 个只有 nexscope 块没有根级 name/description。
+  // 这条守住"不依赖 FRONTMATTER_REPAIRS 兜底"——文件本身必须标准。
+  const dir = join(ROOT, 'skills')
+  const dirs = readdirSync(dir, { withFileTypes: true }).filter((d) => d.isDirectory())
+  assert.equal(dirs.length, 54)
+  const bad = []
+  for (const d of dirs) {
+    const file = join(dir, d.name, 'SKILL.md')
+    if (!existsSync(file)) { bad.push(`${d.name}(缺 SKILL.md)`); continue }
+    const parsed = parse(file)
+    if (!parsed || !parsed.name || !parsed.description) bad.push(`${d.name}(缺 name/description)`)
+    else if (parsed.description.includes('\\n')) bad.push(`${d.name}(description 含字面 \\n)`)
+    else if (parsed.description.length < 20) bad.push(`${d.name}(description 过短)`)
+  }
+  assert.deepEqual(bad, [], `以下技能 frontmatter 非标：${bad.join('、')}`)
 })
 
 test('provider：候选齐全、get 返回正文（rank 600 让位）', async () => {
@@ -169,3 +187,4 @@ test('requestRejection：无 connection 服务时放行（宿主 token 已把关
   const okService = { get: () => ({ requestRejection: () => false }) }
   assert.equal(requestRejection(okService, { headers: {} }), false)
 })
+
