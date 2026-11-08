@@ -4,6 +4,9 @@ DeepSeek Harness（dsh）插件：**54 个亚马逊运营技能**随包分发（
 
 技能内容来自 [Amazon-Skills](https://github.com/nexscope-ai/Amazon-Skills)（MIT，Copyright (c) 2026 Nexscope AI）——见 `skills/LICENSE` 与 `skills/manifest.json`。
 
+
+<img width="2493" height="1199" alt="image" src="https://github.com/user-attachments/assets/f0480edb-7e62-4f7a-a4f1-6d8ef33e9306" />
+
 ## 装上以后有什么
 
 | 能力 | 说明 |
