@@ -9,6 +9,11 @@ const { useState, useEffect, useCallback } = require('react')
 const PANEL_ID = 'amazon-skills' // = cordis.patch.yml 的 id
 const BASE = 'amazon-skills' // = host.js 的 webServer 前缀（相对路径 fetch）
 
+// 点击技能卡 → 开新对话并把 `/技能名 ` 填进输入框（不直接发送，用户补完需求再发）。
+// 走 Host 的 uiWorkspace.startSession（与「运营 Agent」插件同一套入口）：
+//   startSession(sessionId?, { prompt, whenDraftExists: 'keep'|'replace'|'append' })
+let openInChat = null
+
 function PanelIcon(props) {
   return h('svg', { width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none', ...props },
     h('rect', { x: 2.5, y: 2.5, width: 19, height: 19, rx: 5, fill: '#d98e04' }),
@@ -40,9 +45,15 @@ function CatalogTab() {
   if (catalog.error) return h('div', { style: styles.error }, catalog.error)
 
   const categories = ['全部', ...[...new Set(catalog.skills.map((s) => s.category))]]
+  const q = query.trim().toLowerCase()
   const filtered = catalog.skills.filter((s) =>
     (category === '全部' || s.category === category) &&
-    (!query.trim() || s.name.includes(query.toLowerCase()) || s.description.includes(query)))
+    (!q || s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)))
+
+  const use = (name) => {
+    if (!openInChat) return
+    openInChat(`/${name} `)
+  }
 
   return h('div', null,
     h('div', { style: styles.row },
@@ -51,13 +62,28 @@ function CatalogTab() {
       }),
       h('select', { value: category, onChange: (e) => setCategory(e.target.value), style: styles.input },
         categories.map((c) => h('option', { key: c, value: c }, c)))),
+    h('div', { style: styles.hint }, '点任意技能卡 → 开新对话并把 /技能名 填进输入框，补上你的需求直接回车即可'),
     h('div', { style: styles.skillList },
-      filtered.map((s) => h('div', { key: s.name, style: styles.skillCard },
-        h('div', { style: styles.skillName }, '/' + s.name),
-        h('div', { style: styles.skillCategory }, s.category),
+      filtered.map((s) => h('div', {
+        key: s.name,
+        style: styles.skillCard,
+        role: 'button',
+        tabIndex: 0,
+        title: `在对话里使用 /${s.name}`,
+        onClick: () => use(s.name),
+        onKeyDown: (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); use(s.name) }
+        },
+        onMouseEnter: (e) => { e.currentTarget.style.borderColor = '#d98e04' },
+        onMouseLeave: (e) => { e.currentTarget.style.borderColor = '#e3e3e6' },
+      },
+        h('div', { style: styles.skillHead },
+          h('span', { style: styles.skillName }, '/' + s.name),
+          h('span', { style: styles.skillCategory }, s.category),
+          h('span', { style: styles.skillUse }, '填入对话 →')),
         h('div', { style: styles.skillDesc }, s.description.length > 160 ? s.description.slice(0, 160) + '…' : s.description))),
       filtered.length === 0 ? h('div', { style: styles.muted }, '没有匹配的技能。') : null),
-    h('div', { style: { ...styles.muted, marginTop: 8 } }, '在对话里用 /技能名 或自然语言触发；Host 工具（amazon_suggest / amazon_fetch_listing）为技能提供真实数据。'))
+    h('div', { style: { ...styles.muted, marginTop: 8 } }, '也可以在对话里直接说需求（不用记技能名）；Host 工具（amazon_suggest / amazon_fetch_listing）为技能提供真实数据。'))
 }
 
 // ---------- Tab 2：关键词扩展器 ----------
@@ -133,7 +159,10 @@ const styles = {
   muted: { color: '#8a8a92' },
   error: { color: '#c0392b' },
   skillList: { display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' },
-  skillCard: { background: '#fff', border: '1px solid #e3e3e6', borderRadius: 10, padding: 10 },
+  skillCard: { background: '#fff', border: '1px solid #e3e3e6', borderRadius: 10, padding: 10, cursor: 'pointer', transition: 'border-color 120ms, box-shadow 120ms' },
+  skillHead: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  skillUse: { marginLeft: 'auto', fontSize: 11, color: '#b57200' },
+  hint: { fontSize: 12, color: '#8a5a00', background: '#fcf3e2', border: '1px solid #f2e0c0', borderRadius: 8, padding: '6px 10px', marginBottom: 10 },
   skillName: { fontWeight: 700, color: '#8a5a00' },
   skillCategory: { display: 'inline-block', marginLeft: 8, padding: '1px 8px', borderRadius: 999, background: '#fcf3e2', color: '#8a5a00', fontSize: 11 },
   skillDesc: { marginTop: 4, color: '#4a4a50', lineHeight: 1.5 },
@@ -142,6 +171,15 @@ const styles = {
 }
 
 function apply(ctx) {
+  // 开新对话并预填草稿（不直接发送）。与「运营 Agent」插件同一入口。
+  openInChat = (prompt) => {
+    try {
+      ctx.uiWorkspace.startSession(undefined, { prompt, whenDraftExists: 'replace' })
+    } catch (err) {
+      console.error('[amazon-skills] 开新对话失败', err)
+      alert('开新对话失败：' + ((err && err.message) || err))
+    }
+  }
   ctx.slots.inject('sidebar.panellist', () =>
     ctx.slots.register({ name: 'sidebar.panellist', id: PANEL_ID, order: 9, label: () => '卖家工具箱' }, PanelIcon))
   ctx.slots.inject('main', () =>
@@ -149,5 +187,5 @@ function apply(ctx) {
 }
 
 exports.isPlugin = true
-exports.inject = ['slots']
+exports.inject = ['slots', 'uiWorkspace']
 exports.apply = apply

@@ -129,18 +129,34 @@ export const amazonFetchListingTool = {
     check(args, this.parameters)
     const cfg = configRef.config
     const out = await fetchListing(args.asin, { market: args.market || cfg.defaultMarket })
-    const f = out.fields
+    // lib/listing.js 的 extractFields 返回 { found, missing }，整块放在 out.fields 里。
+    // 0.1.0 这里直接当扁平对象读（out.fields.title），导致抓成功也一个字段都输不出来。
+    const f = out.fields?.found || {}
+    const missing = out.fields?.missing || []
     const lines = []
     for (const [key, label] of [
       ['title', '标题'], ['brand', '品牌'], ['price', '价格'], ['rating', '评分'],
       ['reviewCount', '评论数'], ['bsr', 'BSR'], ['dateFirstAvailable', '上架日期'],
       ['hiResImages', '高清图数量'], ['hasAplus', 'A+ 内容'],
     ]) {
-      if (f[key] !== undefined) lines.push(`${label}: ${f[key] === true ? '有' : f[key]}`)
+      if (f[key] !== undefined && f[key] !== null && f[key] !== '') {
+        lines.push(`${label}: ${f[key] === true ? '有' : f[key]}`)
+      }
     }
-    if (f.bullets) lines.push('五点卖点:', ...f.bullets.map((b) => `- ${b}`))
-    const missingNote = f.missing?.length ? `\n（未抓到：${f.missing.join('、')}——亚马逊反爬或页面变体导致，分析时注明数据缺失）` : ''
-    return result(true, `已抓取 ${out.asin}（${out.market}）的商品页：`, lines.join('\n') + missingNote)
+    if (Array.isArray(f.bullets) && f.bullets.length) lines.push('五点卖点:', ...f.bullets.map((b) => `- ${b}`))
+
+    const got = lines.length
+    const notes = []
+    if (missing.length) {
+      notes.push(`未抓到：${missing.join('、')}（亚马逊反爬或页面变体导致，分析时注明数据缺失）`)
+    }
+    if (got === 0) {
+      notes.push('本次一个字段都没解析出来。可能是反爬验证页或页面改版：让用户直接把 Listing 文案粘贴进来，或稍后重试。')
+    } else if (got <= 3) {
+      notes.push('只解析到少量字段，做 Listing 审计/竞品对比前建议让用户补齐关键信息（标题、五点、价格、评论数）。')
+    }
+    const body = lines.join('\n') + (notes.length ? `\n\n[提示]\n- ${notes.join('\n- ')}` : '')
+    return result(true, `已抓取 ${out.asin}（${out.market}）的商品页，解析到 ${got} 项：`, body)
   },
 }
 
