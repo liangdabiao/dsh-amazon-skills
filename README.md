@@ -64,13 +64,13 @@ node scripts/vendor-manifest.mjs
 
 ```bash
 # 从 GitHub 装（dist/client.js 已入库，装完即有面板）
-dsh plugin --profile web add github:liangdabiao/dsh-amazon-skills
+dsh plugin --profile web add https://github.com/liangdabiao/dsh-amazon-skills
 
 # 钉版本
-dsh plugin --profile web add github:liangdabiao/dsh-amazon-skills#v0.1.1
+dsh plugin --profile web add https://github.com/liangdabiao/dsh-amazon-skills#v0.1.2
 ```
 
-> ⚠️ 本包**没有发布到 npm**，所以 `dsh plugin add dsh-amazon-skills` 会失败——请用上面的 `github:` 形式。
+> ⚠️ 本包**没有发布到 npm**，所以 `dsh plugin add dsh-amazon-skills` 会失败——请用上面的 GitHub 地址形式。
 >
 > `dist/client.js` 是入库文件：dsh 宿主直接消费已构建的客户端 bundle（`package.json` → `exports["./client"]`），缺它会导致插件激活失败、侧栏「卖家工具箱」面板不出现。改完源码记得 `npm run build` 再提交。
 
